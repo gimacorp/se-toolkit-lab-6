@@ -16,8 +16,8 @@ Outline:
 - [Create a `Lab Task` issue](#create-a-lab-task-issue)
 - [Switch to the `main` branch](#switch-to-the-main-branch)
 - [Detect conflicts](#detect-conflicts)
-- [Pull changes from `origin/main`](#pull-changes-from-originmain)
-- [Pull changes from `origin/main` and rebase](#pull-changes-from-originmain-and-rebase)
+- [Pull changes from `main` on `origin`](#pull-changes-from-main-on-origin)
+- [Pull changes from `main` on `upstream`](#pull-changes-from-main-on-upstream)
 - [Switch to a new branch](#switch-to-a-new-branch)
   - [`<task-branch>`](#task-branch)
 - [Edit files](#edit-files)
@@ -45,22 +45,13 @@ Outline:
 
 [Detect conflicts with the `origin/main`](./git-vscode.md#detect-conflicts).
 
-## Pull changes from `origin/main`
+## Pull changes from `main` on `origin`
 
-[Pull changes from the `main` branch in your fork on `GitHub`](./git-vscode.md#pull-changes-from-the-branch-on-remote).
+[Pull changes](./git-vscode.md#pull-changes-from-the-branch-on-remote) from `main` on [`origin`](./github.md#origin).
 
-## Pull changes from `origin/main` and rebase
+## Pull changes from `main` on `upstream`
 
-You may see errors and messages about conflicts after pulling.
-
-Rebasing places your local commits on top of the commits from `origin/main`. Conflicts occur when commits from `origin/main` modified the same lines in the same files as your local commits.
-
-Complete the following steps:
-
-1. [Pull and rebase from `origin/main`](./git-vscode.md#pull-changes-from-branch-on-remote-and-rebase).
-2. If conflicts occur, [resolve them](./git-vscode.md#resolve-a-merge-conflict).
-
-<!-- TODO pull from upstream -->
+[Pull changes](./git-vscode.md#pull-changes-from-the-branch-on-remote) from `main` on [`upstream`](./github.md#upstream) to get the latest fixes from the instructors' repository.
 
 ## Switch to a new branch
 
