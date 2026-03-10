@@ -72,8 +72,8 @@ No issues found.
 
 ### 4.2. Terminal commands
 
-1. **[High]** Line 191: `npm install && npm run dev` chains two commands with different concerns (dependency installation and dev server startup) using `&&`. Per tasks.md Section 3, commands from different tools or concerns must not be chained — split into separate numbered steps.
-2. **[Low]** Line 238: `git fetch origin && git checkout <task-branch> && git pull` chains three `Git` commands with `&&`. While they all serve the goal of switching to the remote branch, tasks.md Section 3 discourages chaining — consider splitting into separate numbered steps.
+1. ~~**[High]** Line 191: `npm install && npm run dev` chains two commands with different concerns (dependency installation and dev server startup) using `&&`. Per tasks.md Section 3, commands from different tools or concerns must not be chained — split into separate numbered steps.~~
+2. ~~**[Low]** Line 238: `git fetch origin && git checkout <task-branch> && git pull` chains three `Git` commands with `&&`. While they all serve the goal of switching to the remote branch, tasks.md Section 3 discourages chaining — consider splitting into separate numbered steps.~~
 
 ### 4.3. Command Palette commands
 
@@ -137,15 +137,15 @@ Not applicable.
 
 ### 4.18. Inline formatting of technical terms
 
-1. **[Medium]** Lines 1, 9, 46, 50, 133, 169, 288: "front-end" / "Front-end" should be "frontend" / "Frontend". Convention 4.18 states: "frontend — the front-end service; write as plain text, not inline code (not 'front-end' or 'front end')." Affected locations:
-   - Line 1: `# Dashboard Front-end` → `# Dashboard Frontend`
-   - Line 9: "to the front-end" → "to the frontend"
-   - Line 46: `[Task] Dashboard Front-end` → `[Task] Dashboard Frontend`
-   - Line 50: "the front-end directory" → "the frontend directory"
-   - Line 133: "the front-end directory" → "the frontend directory"
-   - Line 169: "the front-end directory" → "the frontend directory"
-   - Line 288: "The front-end renders" → "The frontend renders"
-2. **[Medium]** Line 181: "back-end API" should be "backend API". Convention 4.18 states: "backend — the back-end service; write as plain text, not inline code (not 'back-end' or 'back end')."
+1. ~~**[Medium]** Lines 1, 9, 46, 50, 133, 169, 288: "front-end" / "Front-end" should be "frontend" / "Frontend". Convention 4.18 states: "frontend — the front-end service; write as plain text, not inline code (not 'front-end' or 'front end')." Affected locations:~~
+   - ~~Line 1: `# Dashboard Front-end` → `# Dashboard Frontend`~~
+   - ~~Line 9: "to the front-end" → "to the frontend"~~
+   - ~~Line 46: `[Task] Dashboard Front-end` → `[Task] Dashboard Frontend`~~
+   - ~~Line 50: "the front-end directory" → "the frontend directory"~~
+   - ~~Line 133: "the front-end directory" → "the frontend directory"~~
+   - ~~Line 169: "the front-end directory" → "the frontend directory"~~
+   - ~~Line 288: "The front-end renders" → "The frontend renders"~~
+2. ~~**[Medium]** Line 181: "back-end API" should be "backend API". Convention 4.18 states: "backend — the back-end service; write as plain text, not inline code (not 'back-end' or 'back end')."~~
 
 ### 4.19. Steps with sub-steps
 
@@ -200,11 +200,11 @@ Not applicable (uses `<your-vm-ip-address>` placeholder, not a hardcoded example
 | Conceptual [High] | 0 |
 | Conceptual [Medium] | 1 |
 | Conceptual [Low] | 4 |
-| Convention [High] | 2 |
-| Convention [Medium] | 2 |
-| Convention [Low] | 2 |
+| Convention [High] | 1 |
+| Convention [Medium] | 0 |
+| Convention [Low] | 1 |
 | TODOs | 1 |
 | Empty sections | 1 |
-| **Total** | **13** |
+| **Total** | **9** |
 
-**Overall:** The task is structurally sound — it follows the task document template correctly, has an accurate ToC, proper Git workflow integration (steps 1.1, 1.2, 1.10, 1.11), and well-formatted acceptance criteria. The two highest-priority issues are: (1) the chained `npm install && npm run dev` command on line 191, which violates the "never chain different concerns" rule and must be split into separate steps; and (2) the missing Mermaid sequence diagram, which is required since the task spans local, VM, and GitHub environments. The consistent use of "front-end" / "back-end" instead of "frontend" / "backend" affects 8 locations and should be corrected throughout. The manual fallback path (TIP on lines 106–116) covers only a bar chart setup while the task requires at least two visualizations, leaving the non-AI path incomplete.
+**Overall:** The chained commands and "front-end"/"back-end" naming issues have been fixed. Remaining issues: (1) the missing Mermaid sequence diagram (Convention [High]), required since the task spans local, VM, and GitHub environments; (2) the "Complete these steps:" vs "Complete the following steps:" wording ambiguity (Convention [Low]); (3) five conceptual findings including an incomplete manual fallback path (D8), missing checkpoints (D4), and missing prompt template for the navigation AI step (D11); (4) one TODO and one empty section (Diagram).
