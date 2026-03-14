@@ -1,12 +1,17 @@
 
 """
 <<<<<<< HEAD
+<<<<<<< HEAD
 System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
 Task 3: Agentic loop with read_file, list_files, and query_api tools.
 =======
 Documentation Agent - Calls LLM with tools to answer questions from wiki.
 Task 2: Agentic loop with read_file and list_files tools.
 >>>>>>> main
+=======
+System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
+Task 3: Agentic loop with read_file, list_files, and query_api tools.
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
 """
 
 import sys
@@ -43,6 +48,9 @@ def read_file(path: str) -> str:
     if ".." in path or path.startswith("/"):
         return f"Error: Access denied - path traversal not allowed"
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     
     project_root = Path(__file__).parent
     file_path = (project_root / path).resolve()
@@ -265,6 +273,7 @@ def call_llm(messages: list, config: dict, tools: list = None) -> dict:
         "max_tokens": 1000
     }
     
+<<<<<<< HEAD
 =======
     
     # Get project root
@@ -388,6 +397,8 @@ def call_llm(messages: list, config: dict, tools: list = None) -> dict:
     }
     
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = "auto"
@@ -403,6 +414,9 @@ def execute_tool(tool_name: str, args: dict) -> str:
     elif tool_name == "list_files":
         return list_files(args.get("path", ""))
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     elif tool_name == "query_api":
         return query_api(
             args.get("method", "GET"),
@@ -410,8 +424,11 @@ def execute_tool(tool_name: str, args: dict) -> str:
             args.get("body"),
             args.get("auth", True)
         )
+<<<<<<< HEAD
 =======
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     else:
         return f"Error: Unknown tool - {tool_name}"
 
@@ -435,6 +452,9 @@ def main():
     ]
     
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     tool_calls_log = []
     max_tool_calls = 10
     tool_call_count = 0
@@ -448,6 +468,7 @@ def main():
                 args = json.loads(tool_call.function.arguments)
                 result = execute_tool(tool_name, args)
                 
+<<<<<<< HEAD
 =======
     # Initialize messages
     messages = [
@@ -477,6 +498,8 @@ def main():
                 
                 # Log tool call
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
                 tool_calls_log.append({
                     "tool": tool_name,
                     "args": args,
@@ -484,11 +507,15 @@ def main():
                 })
                 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
                 messages.append({"role": "assistant", "tool_calls": [tool_call]})
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
                 
                 tool_call_count += 1
         else:
+<<<<<<< HEAD
 =======
                 # Add tool call and result to messages
                 messages.append({
@@ -506,6 +533,8 @@ def main():
         else:
             # LLM provided final answer
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             final_answer = response.content
             
             # Try to extract source from the answer
@@ -515,29 +544,39 @@ def main():
                 source = source_match.group(1)
             
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             # Prepare output
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             output = {
                 "answer": final_answer.strip(),
                 "source": source,
                 "tool_calls": tool_calls_log
             }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             
             # Output JSON
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             print(json.dumps(output, indent=2))
             sys.exit(0)
     
     # Max tool calls reached
     output = {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
         "answer": "Maximum tool calls reached.",
         "source": "",
         "tool_calls": tool_calls_log
     }
+<<<<<<< HEAD
 =======
         "answer": "Maximum tool calls reached. Partial answer based on available information.",
         "source": "",
@@ -545,6 +584,8 @@ def main():
     }
     
 >>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     print(json.dumps(output, indent=2))
     sys.exit(0)
 
