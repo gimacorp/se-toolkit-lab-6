@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
 Task 3: Agentic loop with read_file, list_files, and query_api tools.
