@@ -21,62 +21,83 @@ User Question → agent.py → LLM API → JSON Answer
    ```bash
    uv pip install openai python-dotenv
 
-
    
-## Task 2: Documentation Agent
+## Task 3: The System Agent
 
-### Tools
+### New Tool: query_api
 
-The agent has two tools:
+The agent now has a third tool to query the deployed backend API:
 
-1. **read_file(path)**: Read a file from the project repository
-   - Parameters: `path` (relative path from project root)
-   - Returns: File contents as string
-   - Security: Prevents path traversal (no `../`)
+**query_api(method, path, body, auth)**: Make HTTP requests to the backend
+- Parameters:
+  - `method`: HTTP method (GET, POST, etc.)
+  - `path`: API endpoint path (e.g., `/items/`, `/analytics/completion-rate`)
+  - `body`: Optional JSON request body
+  - `auth`: Whether to include authentication (default: true)
+- Returns: JSON with `status_code` and `body`
+- Authentication: Uses `LMS_API_KEY` from `.env.docker.secret`
 
-2. **list_files(path)**: List files in a directory
-   - Parameters: `path` (relative directory path)
-   - Returns: Newline-separated list of entries
-   - Security: Only lists within project directory
+### When to Use Each Tool
 
-### Agentic Loop
+**read_file / list_files**:
+- Wiki documentation questions
+- Source code analysis
+- Configuration file inspection
+- Examples: "What does the wiki say about...", "How is X implemented?"
 
-The agent follows this loop:
+**query_api**:
+- System facts (framework, ports, status codes)
+- Data queries (item counts, analytics)
+- API endpoint testing (with and without authentication)
+- Bug diagnosis through API errors
+- Examples: "How many items...", "What status code...", "What framework..."
 
-1. Send user question + tool definitions to LLM
-2. If LLM responds with tool calls:
-   - Execute each tool
-   - Append results as tool role messages
-   - Send back to LLM
-   - Repeat (max 10 tool calls)
-3. If LLM responds with text answer:
-   - Extract answer and source
-   - Output JSON and exit
+### Environment Variables
 
-### System Prompt
+The agent reads configuration from TWO environment files:
 
-The system prompt instructs the LLM to:
-- Use `list_files` to discover wiki files
-- Use `read_file` to find answers
-- Include source references (file path + section anchor)
-- Be concise and accurate
+1. **`.env.agent.secret`** (LLM configuration):
+   - `LLM_API_KEY`: LLM provider API key
+   - `LLM_API_BASE`: LLM API endpoint URL
+   - `LLM_MODEL`: Model name
 
-### Output Format
+2. **`.env.docker.secret`** (Backend configuration):
+   - `LMS_API_KEY`: Backend API authentication key
 
-```json
-{
-  "answer": "Answer text",
-  "source": "wiki/git-workflow.md#section-name",
-  "tool_calls": [
-    {
-      "tool": "list_files",
-      "args": {"path": "wiki"},
-      "result": "file1.md\nfile2.md"
-    },
-    {
-      "tool": "read_file",
-      "args": {"path": "wiki/file.md"},
-      "result": "File contents..."
-    }
-  ]
-}
+3. **Optional**:
+   - `AGENT_API_BASE_URL`: Backend base URL (default: `http://localhost:42002`)
+
+### System Prompt Strategy
+
+The system prompt provides detailed guidance:
+
+1. **Tool selection**: Clear rules on when to use each tool
+2. **Specific workflows**: Step-by-step strategies for common question types
+3. **Examples**: Concrete examples for ETL, API testing, framework questions
+4. **Systematic approach**: Discover → Read → Answer
+
+### Benchmark Results
+
+**Initial Score:** 5/10 passed  
+**Final Score:** 10/10 passed ✓
+
+### Lessons Learned
+
+1. **Authentication matters**: The `auth` parameter is crucial for testing unauthenticated access. Without it, the agent cannot answer "What status code without auth?" questions.
+
+2. **Tool descriptions are critical**: Vague descriptions lead to wrong tool selection. Detailed descriptions with examples dramatically improve performance.
+
+3. **System prompt is everything**: The LLM needs explicit guidance on:
+   - When to use each tool
+   - Specific strategies for different question types
+   - How to handle edge cases (like testing without auth)
+
+4. **Multi-step reasoning**: Some questions require chaining tools:
+   - Query API → get error → read source → find bug
+   - List files → find pipeline → read code → explain idempotency
+
+5. **No hardcoded values**: The autochecker uses different credentials and backend URLs. Everything must come from environment variables.
+
+6. **Iterative improvement**: The benchmark is designed for iteration. Run it, see what fails, fix one thing, re-run. Repeat until 10/10.
+
+### Architecture
