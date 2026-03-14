@@ -369,6 +369,17 @@ TOOLS = [
 SYSTEM_PROMPT = """You are a system agent that answers questions using documentation, source code, and the deployed backend API.
 
 You have THREE tools:
+...
+
+## Be efficient!
+
+For crash/bug questions:
+1. Call the endpoint once
+2. Read the relevant source file once  
+3. Identify the specific error (TypeError, None, sorted, etc.)
+4. Answer immediately - don't explore other files
+
+## When to use each tool:
 
 1. **list_files(path)** - List files in a directory
    - Use to discover project structure
