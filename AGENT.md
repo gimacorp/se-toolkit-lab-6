@@ -19,6 +19,9 @@ User Question → agent.py → LLM API → JSON Answer
 
 1. **Ensure dependencies are installed:**
    ```bash
+<<<<<<< HEAD
+   uv pip install openai python-dotenv
+=======
    uv pip install openai python-dotenv
 
    
@@ -101,3 +104,4 @@ The system prompt provides detailed guidance:
 6. **Iterative improvement**: The benchmark is designed for iteration. Run it, see what fails, fix one thing, re-run. Repeat until 10/10.
 
 ### Architecture
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9

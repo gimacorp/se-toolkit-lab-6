@@ -1,7 +1,17 @@
 
 """
+<<<<<<< HEAD
+<<<<<<< HEAD
 System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
 Task 3: Agentic loop with read_file, list_files, and query_api tools.
+=======
+Documentation Agent - Calls LLM with tools to answer questions from wiki.
+Task 2: Agentic loop with read_file and list_files tools.
+>>>>>>> main
+=======
+System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
+Task 3: Agentic loop with read_file, list_files, and query_api tools.
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
 """
 
 import sys
@@ -37,6 +47,10 @@ def read_file(path: str) -> str:
     # Security: prevent path traversal
     if ".." in path or path.startswith("/"):
         return f"Error: Access denied - path traversal not allowed"
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     
     project_root = Path(__file__).parent
     file_path = (project_root / path).resolve()
@@ -259,6 +273,182 @@ def call_llm(messages: list, config: dict, tools: list = None) -> dict:
         "max_tokens": 1000
     }
     
+<<<<<<< HEAD
+=======
+    
+    # Get project root
+    project_root = Path(__file__).parent
+    
+    # Build full path
+    file_path = (project_root / path).resolve()
+    
+    # Security: ensure file is within project directory
+    if not str(file_path).startswith(str(project_root.resolve())):
+        return f"Error: Access denied - file outside project directory"
+    
+    # Read file
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return f"Error: File not found - {path}"
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+
+def list_files(path: str) -> str:
+    """List files and directories at a given path."""
+    # Security: prevent path traversal
+    if ".." in path or path.startswith("/"):
+        return "Error: Access denied - path traversal not allowed"
+    
+    # Get project root
+    project_root = Path(__file__).parent
+    
+    # Build full path
+    dir_path = (project_root / path).resolve()
+    
+    # Security: ensure directory is within project
+    if not str(dir_path).startswith(str(project_root.resolve())):
+        return "Error: Access denied - directory outside project"
+    
+    # List files
+    try:
+        entries = []
+        for entry in dir_path.iterdir():
+            if entry.is_dir():
+                entries.append(f"{entry.name}/")
+            else:
+                entries.append(entry.name)
+        return "\n".join(sorted(entries))
+    except FileNotFoundError:
+        return f"Error: Directory not found - {path}"
+    except Exception as e:
+        return f"Error listing directory: {e}"
+
+
+# Tool schemas for OpenAI function calling
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Read a file from the project repository",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path from project root (e.g., 'wiki/git-workflow.md')"
+                    }
+                },
+                "required": ["path"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_files",
+            "description": "List files and directories at a given path",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative directory path from project root (e.g., 'wiki')"
+                    }
+                },
+                "required": ["path"]
+            }
+        }
+    }
+]
+
+# System prompt for the agent
+SYSTEM_PROMPT = """You are a system agent that answers questions using documentation, source code, and the deployed backend API.
+
+You have THREE tools:
+...
+
+## Be efficient!
+
+For crash/bug questions:
+1. Call the endpoint once
+2. Read the relevant source file once  
+3. Identify the specific error (TypeError, None, sorted, etc.)
+4. Answer immediately - don't explore other files
+
+## When to use each tool:
+
+1. **list_files(path)** - List files in a directory
+   - Use to discover project structure
+   - Common paths: '.', 'src', 'wiki', 'backend', 'backend/app/routers'
+
+2. **read_file(path)** - Read a file from the repository
+   - Use for wiki documentation, source code, config files
+   - Examples: 'wiki/git-workflow.md', 'backend/app/main.py'
+
+3. **query_api(method, path, body, auth)** - Query the deployed backend API
+   - Use for SYSTEM FACTS and DATA QUERIES about the RUNNING system
+   - Set auth=false to test unauthenticated requests
+   - Examples: GET /items/, GET /analytics/completion-rate
+
+## When to use each tool:
+
+**Use read_file/list_files when:**
+- Question asks about documentation or wiki
+- Question asks about source code or implementation
+- Question mentions specific files or directories
+
+**Use query_api when:**
+- Question asks about the RUNNING system
+- Question asks for counts, statistics, or current data
+- Question asks about HTTP status codes or API responses
+
+## Strategy for specific questions:
+
+**API router questions (e.g., "List all API router modules"):**
+- Use list_files("backend/app/routers") ONCE
+- Answer immediately with what you see
+- Example: "items - items management, analytics - analytics data, interactions - user interactions, pipeline - ETL pipeline"
+- Don't read each file individually!
+
+**ETL/Idempotency questions:**
+- list_files("backend/app") or list_files("src") to find pipeline files
+- read_file to examine the code
+- Look for: external_id, duplicate, skip
+
+**API without auth questions:**
+- Use query_api with auth=false
+- Example: query_api("GET", "/items/", auth=false)
+
+**Framework questions:**
+- read_file("backend/app/main.py") or read_file("backend/app/settings.py")
+- Look for: FastAPI, Flask, Django
+
+Be systematic but efficient. Maximum 10 tool calls.
+Always cite your source (file path or API endpoint).
+"""
+
+
+def call_llm(messages: list, config: dict, tools: list = None) -> dict:
+    """Call the LLM with messages and optional tools."""
+    client = OpenAI(
+        api_key=config["api_key"],
+        base_url=config["base_url"]
+    )
+    
+    kwargs = {
+        "model": config["model"],
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": 1000
+    }
+    
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = "auto"
@@ -273,6 +463,10 @@ def execute_tool(tool_name: str, args: dict) -> str:
         return read_file(args.get("path", ""))
     elif tool_name == "list_files":
         return list_files(args.get("path", ""))
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     elif tool_name == "query_api":
         return query_api(
             args.get("method", "GET"),
@@ -280,6 +474,11 @@ def execute_tool(tool_name: str, args: dict) -> str:
             args.get("body"),
             args.get("auth", True)
         )
+<<<<<<< HEAD
+=======
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     else:
         return f"Error: Unknown tool - {tool_name}"
 
@@ -302,6 +501,10 @@ def main():
         {"role": "user", "content": question}
     ]
     
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     tool_calls_log = []
     max_tool_calls = 10
     tool_call_count = 0
@@ -315,17 +518,73 @@ def main():
                 args = json.loads(tool_call.function.arguments)
                 result = execute_tool(tool_name, args)
                 
+<<<<<<< HEAD
+=======
+    # Initialize messages
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": question}
+    ]
+    
+    # Track tool calls for output
+    tool_calls_log = []
+    max_tool_calls = 10
+    tool_call_count = 0
+    
+    # Agentic loop
+    while tool_call_count < max_tool_calls:
+        # Call LLM with tools
+        response = call_llm(messages, config, tools=TOOLS)
+        
+        # Check for tool calls
+        if response.tool_calls:
+            # Execute each tool call
+            for tool_call in response.tool_calls:
+                tool_name = tool_call.function.name
+                args = json.loads(tool_call.function.arguments)
+                
+                # Execute tool
+                result = execute_tool(tool_name, args)
+                
+                # Log tool call
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
                 tool_calls_log.append({
                     "tool": tool_name,
                     "args": args,
                     "result": result
                 })
                 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
                 messages.append({"role": "assistant", "tool_calls": [tool_call]})
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
                 
                 tool_call_count += 1
         else:
+<<<<<<< HEAD
+=======
+                # Add tool call and result to messages
+                messages.append({
+                    "role": "assistant",
+                    "tool_calls": [tool_call]
+                })
+                
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result
+                })
+                
+                tool_call_count += 1
+        else:
+            # LLM provided final answer
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             final_answer = response.content
             
             # Try to extract source from the answer
@@ -334,20 +593,49 @@ def main():
             if source_match:
                 source = source_match.group(1)
             
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+            # Prepare output
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             output = {
                 "answer": final_answer.strip(),
                 "source": source,
                 "tool_calls": tool_calls_log
             }
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+            
+            # Output JSON
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             print(json.dumps(output, indent=2))
             sys.exit(0)
     
     # Max tool calls reached
     output = {
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
         "answer": "Maximum tool calls reached.",
         "source": "",
         "tool_calls": tool_calls_log
     }
+<<<<<<< HEAD
+=======
+        "answer": "Maximum tool calls reached. Partial answer based on available information.",
+        "source": "",
+        "tool_calls": tool_calls_log
+    }
+    
+>>>>>>> main
+=======
+>>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     print(json.dumps(output, indent=2))
     sys.exit(0)
 
