@@ -1,17 +1,6 @@
-
-"""
-<<<<<<< HEAD
-<<<<<<< HEAD
-System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
+#!/usr/bin/env python3
+"""System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
 Task 3: Agentic loop with read_file, list_files, and query_api tools.
-=======
-Documentation Agent - Calls LLM with tools to answer questions from wiki.
-Task 2: Agentic loop with read_file and list_files tools.
->>>>>>> main
-=======
-System Agent - Calls LLM with tools to answer questions from wiki, source code, and backend API.
-Task 3: Agentic loop with read_file, list_files, and query_api tools.
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
 """
 
 import sys
@@ -25,11 +14,9 @@ from dotenv import load_dotenv
 
 def load_config():
     """Load configuration from environment files"""
-    # Load LLM config from .env.agent.secret
     agent_env = Path(__file__).parent / ".env.agent.secret"
     load_dotenv(agent_env)
     
-    # Load backend config from .env.docker.secret
     docker_env = Path(__file__).parent / ".env.docker.secret"
     load_dotenv(docker_env, override=False)
     
@@ -44,13 +31,8 @@ def load_config():
 
 def read_file(path: str) -> str:
     """Read a file from the project repository."""
-    # Security: prevent path traversal
     if ".." in path or path.startswith("/"):
         return f"Error: Access denied - path traversal not allowed"
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     
     project_root = Path(__file__).parent
     file_path = (project_root / path).resolve()
@@ -93,25 +75,15 @@ def list_files(path: str) -> str:
 
 
 def query_api(method: str, path: str, body: str = None, auth: bool = True) -> str:
-    """
-    Query the deployed backend API.
-    
-    Args:
-        method: HTTP method (GET, POST, etc.)
-        path: API endpoint path
-        body: Optional JSON request body
-        auth: Whether to include authentication (default: True)
-    """
+    """Query the deployed backend API."""
     import requests
     
     base_url = os.getenv("AGENT_API_BASE_URL", "http://localhost:42002")
     lms_api_key = os.getenv("LMS_API_KEY")
     url = f"{base_url}{path}"
     
-    # Prepare headers
     headers = {"Content-Type": "application/json"}
     
-    # Only add auth if requested
     if auth and lms_api_key:
         headers["Authorization"] = f"Bearer {lms_api_key}"
     
@@ -131,15 +103,12 @@ def query_api(method: str, path: str, body: str = None, auth: bool = True) -> st
         return json.dumps({"status_code": 0, "body": f"Error: {str(e)}"})
 
 
-# Tool schemas for OpenAI function calling
 TOOLS = [
     {
         "type": "function",
         "function": {
             "name": "read_file",
-            "description": """Read a file from the project repository. 
-            Use for wiki documentation, source code, and configuration files.
-            Examples: 'wiki/git-workflow.md', 'main.py', 'docker-compose.yml', 'src/pipeline.py'""",
+            "description": "Read a file from the project repository. Use for wiki documentation, source code, config files.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -156,9 +125,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "list_files",
-            "description": """List files and directories at a given path. 
-            Use to discover project structure before reading files.
-            Common paths: '.', 'src', 'wiki', 'backend', 'app', 'src/etl'""",
+            "description": "List files and directories at a given path. Use to discover project structure.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -175,29 +142,14 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "query_api",
-            "description": """Query the deployed backend API for system information, data counts, or analytics.
-            Use for questions about the RUNNING system, not documentation.
-            For testing unauthenticated access, set auth=false.
-            Examples: GET /items/, GET /analytics/completion-rate, GET /health""",
+            "description": "Query the deployed backend API for system information, data counts, or analytics. Set auth=false to test unauthenticated access.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "method": {
-                        "type": "string",
-                        "description": "HTTP method: GET, POST"
-                    },
-                    "path": {
-                        "type": "string",
-                        "description": "API endpoint path (e.g., '/items/', '/analytics/completion-rate')"
-                    },
-                    "body": {
-                        "type": "string",
-                        "description": "Optional JSON request body for POST requests"
-                    },
-                    "auth": {
-                        "type": "boolean",
-                        "description": "Include authentication header (default: true). Set to false to test unauthenticated access."
-                    }
+                    "method": {"type": "string", "description": "HTTP method: GET, POST"},
+                    "path": {"type": "string", "description": "API endpoint path (e.g., '/items/', '/analytics/completion-rate')"},
+                    "body": {"type": "string", "description": "Optional JSON request body for POST requests"},
+                    "auth": {"type": "boolean", "description": "Include authentication header (default: true). Set to false to test unauthenticated access."}
                 },
                 "required": ["method", "path"]
             }
@@ -208,54 +160,27 @@ TOOLS = [
 SYSTEM_PROMPT = """You are a system agent that answers questions using documentation, source code, and the deployed backend API.
 
 You have THREE tools:
+1. list_files(path) - List files in a directory
+2. read_file(path) - Read a file from the repository  
+3. query_api(method, path, body, auth) - Query the deployed backend API
 
-1. **list_files(path)** - List files in a directory
-   - Use to discover project structure
-   - Common paths: '.', 'src', 'wiki', 'backend', 'app'
-
-2. **read_file(path)** - Read a file from the repository
-   - Use for wiki documentation, source code, config files
-   - Examples: 'wiki/git-workflow.md', 'main.py', 'docker-compose.yml'
-
-3. **query_api(method, path, body, auth)** - Query the deployed backend API
-   - Use for SYSTEM FACTS and DATA QUERIES about the RUNNING system
-   - Set auth=false to test unauthenticated requests (for 401/403 status codes)
-   - Examples: GET /items/, GET /analytics/completion-rate
+## Be efficient! For crash/bug questions:
+1. Call the endpoint once
+2. Read the relevant source file once
+3. Identify the specific error (TypeError, None, sorted, etc.)
+4. Answer immediately - don't explore other files
 
 ## When to use each tool:
-
-**Use read_file/list_files when:**
-- Question asks about documentation or wiki
-- Question asks about source code or implementation
-- Question mentions specific files (docker-compose.yml, Dockerfile, pipeline.py)
-- Examples: "What does the wiki say about...", "How is X implemented?", "Read the ETL pipeline"
-
-**Use query_api when:**
-- Question asks about the RUNNING system
-- Question asks for counts, statistics, or current data
-- Question asks about HTTP status codes or API responses
-- Question asks what framework/port the system uses
-- For "without auth" questions: use auth=false
-- Examples: "How many items...", "What status code...", "What framework..."
+**Use read_file/list_files when:** Question asks about documentation, source code, or specific files.
+**Use query_api when:** Question asks about the RUNNING system, counts, statistics, HTTP status codes.
 
 ## Strategy for specific questions:
+**API router questions:** Use list_files("backend/app/routers") ONCE, answer immediately.
+**ETL/Idempotency:** Find pipeline files, look for: external_id, duplicate, skip.
+**API without auth:** Use query_api with auth=false.
+**Framework questions:** Read main.py or settings.py, look for: FastAPI, Flask, Django.
 
-**ETL/Idempotency questions:**
-1. list_files("src") or list_files(".") to find pipeline files
-2. Look for: pipeline.py, etl.py, ingest.py, or etl/ directory
-3. read_file to examine the code
-4. Look for: external_id, duplicate, skip
-
-**API without auth questions:**
-- Use query_api with auth=false
-- Example: query_api("GET", "/items/", auth=false)
-
-**Framework questions:**
-- read_file("main.py") or read_file("requirements.txt") or list_files("src")
-- Look for: FastAPI, Flask, Django
-
-Be systematic: discover → read → answer. Maximum 10 tool calls.
-Always cite your source (file path or API endpoint).
+Be systematic but efficient. Maximum 10 tool calls. Always cite your source.
 """
 
 
@@ -273,182 +198,6 @@ def call_llm(messages: list, config: dict, tools: list = None) -> dict:
         "max_tokens": 1000
     }
     
-<<<<<<< HEAD
-=======
-    
-    # Get project root
-    project_root = Path(__file__).parent
-    
-    # Build full path
-    file_path = (project_root / path).resolve()
-    
-    # Security: ensure file is within project directory
-    if not str(file_path).startswith(str(project_root.resolve())):
-        return f"Error: Access denied - file outside project directory"
-    
-    # Read file
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return f"Error: File not found - {path}"
-    except Exception as e:
-        return f"Error reading file: {e}"
-
-
-def list_files(path: str) -> str:
-    """List files and directories at a given path."""
-    # Security: prevent path traversal
-    if ".." in path or path.startswith("/"):
-        return "Error: Access denied - path traversal not allowed"
-    
-    # Get project root
-    project_root = Path(__file__).parent
-    
-    # Build full path
-    dir_path = (project_root / path).resolve()
-    
-    # Security: ensure directory is within project
-    if not str(dir_path).startswith(str(project_root.resolve())):
-        return "Error: Access denied - directory outside project"
-    
-    # List files
-    try:
-        entries = []
-        for entry in dir_path.iterdir():
-            if entry.is_dir():
-                entries.append(f"{entry.name}/")
-            else:
-                entries.append(entry.name)
-        return "\n".join(sorted(entries))
-    except FileNotFoundError:
-        return f"Error: Directory not found - {path}"
-    except Exception as e:
-        return f"Error listing directory: {e}"
-
-
-# Tool schemas for OpenAI function calling
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "read_file",
-            "description": "Read a file from the project repository",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path from project root (e.g., 'wiki/git-workflow.md')"
-                    }
-                },
-                "required": ["path"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "list_files",
-            "description": "List files and directories at a given path",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative directory path from project root (e.g., 'wiki')"
-                    }
-                },
-                "required": ["path"]
-            }
-        }
-    }
-]
-
-# System prompt for the agent
-SYSTEM_PROMPT = """You are a system agent that answers questions using documentation, source code, and the deployed backend API.
-
-You have THREE tools:
-...
-
-## Be efficient!
-
-For crash/bug questions:
-1. Call the endpoint once
-2. Read the relevant source file once  
-3. Identify the specific error (TypeError, None, sorted, etc.)
-4. Answer immediately - don't explore other files
-
-## When to use each tool:
-
-1. **list_files(path)** - List files in a directory
-   - Use to discover project structure
-   - Common paths: '.', 'src', 'wiki', 'backend', 'backend/app/routers'
-
-2. **read_file(path)** - Read a file from the repository
-   - Use for wiki documentation, source code, config files
-   - Examples: 'wiki/git-workflow.md', 'backend/app/main.py'
-
-3. **query_api(method, path, body, auth)** - Query the deployed backend API
-   - Use for SYSTEM FACTS and DATA QUERIES about the RUNNING system
-   - Set auth=false to test unauthenticated requests
-   - Examples: GET /items/, GET /analytics/completion-rate
-
-## When to use each tool:
-
-**Use read_file/list_files when:**
-- Question asks about documentation or wiki
-- Question asks about source code or implementation
-- Question mentions specific files or directories
-
-**Use query_api when:**
-- Question asks about the RUNNING system
-- Question asks for counts, statistics, or current data
-- Question asks about HTTP status codes or API responses
-
-## Strategy for specific questions:
-
-**API router questions (e.g., "List all API router modules"):**
-- Use list_files("backend/app/routers") ONCE
-- Answer immediately with what you see
-- Example: "items - items management, analytics - analytics data, interactions - user interactions, pipeline - ETL pipeline"
-- Don't read each file individually!
-
-**ETL/Idempotency questions:**
-- list_files("backend/app") or list_files("src") to find pipeline files
-- read_file to examine the code
-- Look for: external_id, duplicate, skip
-
-**API without auth questions:**
-- Use query_api with auth=false
-- Example: query_api("GET", "/items/", auth=false)
-
-**Framework questions:**
-- read_file("backend/app/main.py") or read_file("backend/app/settings.py")
-- Look for: FastAPI, Flask, Django
-
-Be systematic but efficient. Maximum 10 tool calls.
-Always cite your source (file path or API endpoint).
-"""
-
-
-def call_llm(messages: list, config: dict, tools: list = None) -> dict:
-    """Call the LLM with messages and optional tools."""
-    client = OpenAI(
-        api_key=config["api_key"],
-        base_url=config["base_url"]
-    )
-    
-    kwargs = {
-        "model": config["model"],
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": 1000
-    }
-    
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = "auto"
@@ -463,10 +212,6 @@ def execute_tool(tool_name: str, args: dict) -> str:
         return read_file(args.get("path", ""))
     elif tool_name == "list_files":
         return list_files(args.get("path", ""))
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     elif tool_name == "query_api":
         return query_api(
             args.get("method", "GET"),
@@ -474,11 +219,6 @@ def execute_tool(tool_name: str, args: dict) -> str:
             args.get("body"),
             args.get("auth", True)
         )
-<<<<<<< HEAD
-=======
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     else:
         return f"Error: Unknown tool - {tool_name}"
 
@@ -501,10 +241,6 @@ def main():
         {"role": "user", "content": question}
     ]
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     tool_calls_log = []
     max_tool_calls = 10
     tool_call_count = 0
@@ -518,124 +254,37 @@ def main():
                 args = json.loads(tool_call.function.arguments)
                 result = execute_tool(tool_name, args)
                 
-<<<<<<< HEAD
-=======
-    # Initialize messages
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": question}
-    ]
-    
-    # Track tool calls for output
-    tool_calls_log = []
-    max_tool_calls = 10
-    tool_call_count = 0
-    
-    # Agentic loop
-    while tool_call_count < max_tool_calls:
-        # Call LLM with tools
-        response = call_llm(messages, config, tools=TOOLS)
-        
-        # Check for tool calls
-        if response.tool_calls:
-            # Execute each tool call
-            for tool_call in response.tool_calls:
-                tool_name = tool_call.function.name
-                args = json.loads(tool_call.function.arguments)
-                
-                # Execute tool
-                result = execute_tool(tool_name, args)
-                
-                # Log tool call
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
                 tool_calls_log.append({
                     "tool": tool_name,
                     "args": args,
                     "result": result
                 })
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
                 messages.append({"role": "assistant", "tool_calls": [tool_call]})
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
                 
                 tool_call_count += 1
         else:
-<<<<<<< HEAD
-=======
-                # Add tool call and result to messages
-                messages.append({
-                    "role": "assistant",
-                    "tool_calls": [tool_call]
-                })
-                
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": result
-                })
-                
-                tool_call_count += 1
-        else:
-            # LLM provided final answer
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             final_answer = response.content
             
-            # Try to extract source from the answer
             source = ""
             source_match = re.search(r'(wiki/[\w-]+\.md(?:#[\w-]+)?)', final_answer)
             if source_match:
                 source = source_match.group(1)
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            # Prepare output
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             output = {
                 "answer": final_answer.strip(),
                 "source": source,
                 "tool_calls": tool_calls_log
             }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            
-            # Output JSON
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
             print(json.dumps(output, indent=2))
             sys.exit(0)
     
-    # Max tool calls reached
     output = {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
         "answer": "Maximum tool calls reached.",
         "source": "",
         "tool_calls": tool_calls_log
     }
-<<<<<<< HEAD
-=======
-        "answer": "Maximum tool calls reached. Partial answer based on available information.",
-        "source": "",
-        "tool_calls": tool_calls_log
-    }
-    
->>>>>>> main
-=======
->>>>>>> 63b4827945f0cf63803ab2436e30beeeead2a7f9
     print(json.dumps(output, indent=2))
     sys.exit(0)
 
