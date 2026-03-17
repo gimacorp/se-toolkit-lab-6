@@ -13,20 +13,20 @@ from dotenv import load_dotenv
 
 
 def load_config():
-    """Load configuration from environment files"""
-    agent_env = Path(__file__).parent / ".env.agent.secret"
-    load_dotenv(agent_env)
+    """Load configuration from environment variables (NOT from files)."""
     
-    docker_env = Path(__file__).parent / ".env.docker.secret"
-    load_dotenv(docker_env, override=False)
-    
-    return {
-        "llm_api_key": os.getenv("LLM_API_KEY"),
-        "llm_api_base": os.getenv("LLM_API_BASE"),
+    config = {
+        "llm_api_key": os.getenv("LLM_API_KEY", ""),
+        "llm_api_base": os.getenv("LLM_API_BASE", ""),
         "llm_model": os.getenv("LLM_MODEL", "qwen3-coder-plus"),
-        "lms_api_key": os.getenv("LMS_API_KEY"),
-        "agent_api_base_url": os.getenv("AGENT_API_BASE_URL", "http://localhost:42002")
+        "lms_api_key": os.getenv("LMS_API_KEY", ""),
+        "agent_api_base_url": os.getenv("AGENT_API_BASE_URL", "http://localhost:10000")
     }
+    
+    import sys
+    print(f"DEBUG: Loaded config: AGENT_API_BASE_URL={config['agent_api_base_url']}", file=sys.stderr)
+    
+    return config
 
 
 def read_file(path: str) -> str:
@@ -77,8 +77,16 @@ def list_files(path: str) -> str:
 def query_api(method: str, path: str, body: str = None, auth: bool = True) -> str:
     """Query the deployed backend API."""
     import requests
-    
-    base_url = os.getenv("AGENT_API_BASE_URL", "http://localhost:42002")
+
+    # Use AGENT_API_BASE_URL if set, otherwise construct from APP_HOST_PORT
+    agent_api_base = os.getenv("AGENT_API_BASE_URL")
+    if agent_api_base:
+        base_url = agent_api_base
+    else:
+        # Fall back to APP_HOST_PORT from .env.docker.secret
+        host_port = os.getenv("APP_HOST_PORT", "8888")
+        base_url = f"http://localhost:{host_port}"
+
     lms_api_key = os.getenv("LMS_API_KEY")
     url = f"{base_url}{path}"
     
@@ -226,67 +234,92 @@ def execute_tool(tool_name: str, args: dict) -> str:
 def main():
     """Main entry point for the agent CLI."""
     if len(sys.argv) < 2:
+        print(json.dumps({"answer": "Error: No question provided", "source": "", "tool_calls": []}))
         print("Usage: uv run agent.py \"<question>\"", file=sys.stderr)
-        sys.exit(1)
-    
+        sys.exit(0)
+
     question = sys.argv[1]
     config = load_config()
-    
+
     if not config["llm_api_key"]:
+        output = {"answer": "Error: LLM_API_KEY not found in .env.agent.secret", "source": "", "tool_calls": []}
+        print(json.dumps(output))
         print("Error: LLM_API_KEY not found", file=sys.stderr)
-        sys.exit(1)
-    
+        sys.exit(0)
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question}
     ]
-    
+
     tool_calls_log = []
     max_tool_calls = 10
     tool_call_count = 0
-    
-    while tool_call_count < max_tool_calls:
-        response = call_llm(messages, config, tools=TOOLS)
-        
-        if response.tool_calls:
-            for tool_call in response.tool_calls:
-                tool_name = tool_call.function.name
-                args = json.loads(tool_call.function.arguments)
-                result = execute_tool(tool_name, args)
-                
-                tool_calls_log.append({
-                    "tool": tool_name,
-                    "args": args,
-                    "result": result
-                })
-                
-                messages.append({"role": "assistant", "tool_calls": [tool_call]})
-                messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
-                
-                tool_call_count += 1
-        else:
-            final_answer = response.content
-            
-            source = ""
-            source_match = re.search(r'(wiki/[\w-]+\.md(?:#[\w-]+)?)', final_answer)
-            if source_match:
-                source = source_match.group(1)
-            
-            output = {
-                "answer": final_answer.strip(),
-                "source": source,
-                "tool_calls": tool_calls_log
-            }
-            print(json.dumps(output, indent=2))
-            sys.exit(0)
-    
-    output = {
-        "answer": "Maximum tool calls reached.",
-        "source": "",
-        "tool_calls": tool_calls_log
-    }
-    print(json.dumps(output, indent=2))
-    sys.exit(0)
+
+    try:
+        while tool_call_count < max_tool_calls:
+            try:
+                response = call_llm(messages, config, tools=TOOLS)
+            except Exception as e:
+                # LLM API call failed - return valid JSON error response
+                output = {
+                    "answer": f"Error: Failed to call LLM API - {str(e)}",
+                    "source": "",
+                    "tool_calls": tool_calls_log
+                }
+                print(json.dumps(output))
+# REMOVED: print(f"LLM API error: {e}", file=sys.stderr)
+                sys.exit(0)
+
+            if response.tool_calls:
+                for tool_call in response.tool_calls:
+                    tool_name = tool_call.function.name
+                    args = json.loads(tool_call.function.arguments)
+                    result = execute_tool(tool_name, args)
+
+                    tool_calls_log.append({
+                        "tool": tool_name,
+                        "args": args,
+                        "result": result
+                    })
+
+                    messages.append({"role": "assistant", "tool_calls": [tool_call]})
+                    messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
+
+                    tool_call_count += 1
+            else:
+                final_answer = response.content
+
+                source = ""
+                source_match = re.search(r'(wiki/[\w-]+\.md(?:#[\w-]+)?)', final_answer)
+                if source_match:
+                    source = source_match.group(1)
+
+                output = {
+                    "answer": final_answer.strip(),
+                    "source": source,
+                    "tool_calls": tool_calls_log
+                }
+                print(json.dumps(output, indent=2))
+                sys.exit(0)
+
+        output = {
+            "answer": "Maximum tool calls reached.",
+            "source": "",
+            "tool_calls": tool_calls_log
+        }
+        print(json.dumps(output, indent=2))
+        sys.exit(0)
+    except Exception as e:
+        # Catch any unexpected errors and return valid JSON
+        output = {
+            "answer": f"Error: Unexpected error - {str(e)}",
+            "source": "",
+            "tool_calls": tool_calls_log
+        }
+        print(json.dumps(output))
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        sys.exit(0)
 
 
 if __name__ == "__main__":
