@@ -1,11 +1,33 @@
 #!/usr/bin/env python3
-"""
-Benchmark evaluation script for Task 3.
-Runs the agent against 10 benchmark questions and checks answers.
+"""Local evaluation runner for the agent benchmark.
+
+Fetches questions one at a time from the autochecker API,
+runs your agent, and checks the answer locally.
+Stops at the first failure.
+
+Usage:
+    uv run run_eval.py           # all questions, stop at first fail
+    uv run run_eval.py --index 5 # single question (for debugging)
+
+Reads from .env (same credentials as the autochecker):
+    AUTOCHECKER_API_URL  — e.g. https://auche.namaz.live
+    AUTOCHECKER_EMAIL    — your university email
+    AUTOCHECKER_PASSWORD — your GitHub username + Telegram alias
+
+Note:
+    This runner tests your agent against the LOCAL question set only.
+    The autochecker bot tests ADDITIONAL hidden questions not shown here.
+    Some questions use LLM-based judging on the bot side for more accurate
+    scoring (locally they fall back to simple keyword matching).
+    You need to pass a minimum threshold overall (local + hidden).
 """
 
-import subprocess
+import argparse
+import base64
 import json
+import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import TypedDict
@@ -119,17 +141,22 @@ def _run_agent(question: str, timeout: int = 60) -> tuple[AgentOutput, None] | t
         return None, "agent.py not found"
 
     if result.returncode != 0:
-        print(f"Error: Agent exited with code {result.returncode}")
-        print(f"Stderr: {result.stderr}")
-        return None
-    
+        stderr_preview = result.stderr.strip()[:200] if result.stderr else ""
+        return None, f"Agent exited with code {result.returncode}: {stderr_preview}"
+
+    stdout = result.stdout.strip()
+    if not stdout:
+        return None, "Agent produced no output"
+
     try:
-        output = json.loads(result.stdout)
-        return output
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON output: {e}")
-        print(f"Stdout: {result.stdout}")
-        return None
+        data = json.loads(stdout)
+    except json.JSONDecodeError:
+        return None, f"Agent output is not valid JSON: {stdout[:200]}"
+
+    if "answer" not in data:
+        return None, f"Missing 'answer' field in output: {stdout[:200]}"
+
+    return data, None
 
 
 # ---------------------------------------------------------------------------
@@ -328,28 +355,15 @@ def main():
         if ok:
             print(f"  {GREEN}+ [{index + 1}/{total}] {question}{RESET}")
             passed += 1
+            index += 1
         else:
-            print(f"  ✗ FAILED")
-            if not keywords_ok:
-                print(f"    Keywords: Expected {benchmark['expected_keywords']}")
-                print(f"    Answer: {answer[:100]}")
-            if not tools_ok:
-                print(f"    Tools: Required {benchmark['required_tools']}")
-                used = [tc["tool"] for tc in output.get("tool_calls", [])]
-                print(f"    Used: {used}")
-    
-    # Summary
-    print("\n" + "=" * 60)
-    print(f"RESULTS: {passed}/{total} passed")
-    print("=" * 60)
-    
-    if passed == total:
-        print("✓ All benchmark questions passed!")
-        return 0
-    else:
-        print(f"✗ {total - passed} questions failed. Fix and re-run.")
-        return 1
+            answer = data.get("answer", "")
+            print(f"\n  {RED}x [{index + 1}/{total}] {question}{RESET}")
+            print(f"    Your answer: {answer[:200]}")
+            print(reason)
+            print(f"\n{BOLD}{passed}/{total} passed{RESET}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
-    sys.exit(evaluate())
+    main()
